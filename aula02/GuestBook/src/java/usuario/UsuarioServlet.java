@@ -1,6 +1,5 @@
 package usuario;
 
-import guest.Guest;
 import java.io.IOException;
 import javax.ejb.EJB;
 import javax.servlet.ServletException;
@@ -21,108 +20,60 @@ public class UsuarioServlet extends HttpServlet {
     @EJB
     UsuarioDAO usuarioDAO;
 
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        System.out.println("get");
         String acao = request.getParameter("acao");
+
         System.out.println("ação: " + acao);
-
-        if (acao != null && !acao.isEmpty()) {
-            Usuario usuario = obterDados(request, response);
-            if (usuario != null) {
-                efetivarAcao(acao, usuario);
-            }
-        }
-        System.out.println("guest");
-        request.setAttribute("usuarios", usuarioDAO.obterTodosUsuarios());
-        request.getRequestDispatcher("/usuario.jsp").forward(request, response);
-    }
-
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        //http://javafree.uol.com.br/artigo/886161/CRUD-com-Servlet-30-e-MYSQL.html
-        //http://www.guj.com.br/java/122698-alterar-excluir-no-jsp
-        //String cmd = request.getParameter("cmd");  
-        //   if(cmd.equalsIgnoreCase("cadastrar")){  
-//        String nome = request.getParameter("nome");
-//        String cpf = request.getParameter("cpf");
-//        String mac = request.getParameter("mac");
-       
-        
-        
-//        String acao = request.getParameter("acao");
-//        System.out.println("ação: " + acao);
-//
-//        if (acao != null && !acao.isEmpty()) {
-//            Usuario usuario = obterDados(request, response);
-//            if (usuario != null) {
-//                efetivarAcao(acao, usuario);
-//            }
-//        }
-        
-        
-
-//            if (acao.equalsIgnoreCase("cadastrar")) {
-//
-//                System.out.println("cadastrar");
-//
-//                usuarioDAO.gravar(new Usuario(nome, cpf, mac));
-//
-//            } else if (acao.equalsIgnoreCase("atualizar")) {
-//                usuarioDAO.gravar(new Usuario(nome, cpf, mac));
-//                System.out.println("atualizar");
-//
-//            } else if (acao.equalsIgnoreCase("excluir")) {
-//                usuarioDAO.gravar(new Usuario(nome, cpf, mac));
-//                System.out.println("excluir");
-//            }
-        System.out.println("post");
-        doGet(request, response);
-    }
-
-    private void efetivarAcao(String acao, Usuario usuario) {
 
         if (acao != null && !acao.isEmpty()) {
             if (acao.equalsIgnoreCase("cadastrar")) {
                 System.out.println("cadastrar");
-                usuarioDAO.gravar(usuario);
+                cadastrar(request, response);
             } else if (acao.equalsIgnoreCase("atualizar")) {
-                usuarioDAO.alterar(usuario);
                 System.out.println("atualizar");
-            } else if (acao.equalsIgnoreCase("excluir")) {                
-                usuarioDAO.excluir(usuario);
+                alterar(request, response);
+            } else if (acao.equalsIgnoreCase("salvarAlteracao")) {
+                System.out.println("salvarAlteracao");
+                salvarAlteracao(request, response);
+            } else if (acao.equalsIgnoreCase("excluir")) {
                 System.out.println("excluir");
+                excluir(request, response);
+            } else if (acao.equalsIgnoreCase("listar")) {
+                System.out.println("listar");
+                listar(request, response);
             }
         }
     }
 
-    private Usuario obterDados(HttpServletRequest request, HttpServletResponse response) {
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        System.out.println("post");
+        doGet(request, response);
+    }
+
+    private Usuario obterUsuarioDaRequisicao(HttpServletRequest request) {
         String nome = request.getParameter("nome");
         String cpf = request.getParameter("cpf");
         String mac = request.getParameter("mac");
+        String id = request.getParameter("id");
 
         Usuario usuario = null;
         if (validarDados(nome, cpf, mac)) {
             usuario = new Usuario(nome, cpf, mac);
+        }
+        return usuario;
+    }
+
+    private Usuario obterUsuarioPorId(String id) {
+        Usuario usuario = null;
+        if (id != null && !id.isEmpty()) {
+            usuario = usuarioDAO.obterUsuarioPorId(Integer.parseInt(id));
         }
         return usuario;
     }
@@ -132,6 +83,43 @@ public class UsuarioServlet extends HttpServlet {
             return true;
         }
         return false;
+    }
+
+    private void listar(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        request.setAttribute("usuarios", usuarioDAO.obterTodosUsuarios());
+        request.getRequestDispatcher("/usuario.jsp").forward(request, response);
+    }
+
+    private void cadastrar(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        Usuario usuario = obterUsuarioDaRequisicao(request);
+        if (usuario != null) {
+            usuarioDAO.cadastrar(usuario);
+            listar(request, response);
+        }
+    }
+
+    private void alterar(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String id = request.getParameter("id");
+        Usuario usuario = obterUsuarioPorId(id);
+        if (usuario != null) {
+            request.setAttribute("teste", usuario);
+            request.getRequestDispatcher("/usuarioAlterar.jsp").forward(request, response);
+        }
+    }
+
+    private void salvarAlteracao(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        Usuario usuario = obterUsuarioDaRequisicao(request);
+        usuario.setId(Long.parseLong(request.getParameter("id")));
+        usuarioDAO.alterar(usuario);
+        listar(request, response);
+    }
+
+    private void excluir(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String id = request.getParameter("id");
+        if (id != null && !id.isEmpty()) {
+            usuarioDAO.excluir(Integer.parseInt(id));
+        }
+        listar(request, response);
     }
 
     /**

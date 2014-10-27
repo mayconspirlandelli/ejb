@@ -40,6 +40,7 @@ public class Usuario implements Serializable {
         this.cpf = cpf;
         this.mac = mac;
     }
+     
     
     public Long getId() {
         return id;
